@@ -1,10 +1,21 @@
+import os
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import random
+import time
+import gc
+import nibabel as nib
+import tqdm as tqdm
+
+
 from utils.augment import DataAugmenter
 
 import torch
 import torch.nn as nn
 
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -46,6 +57,8 @@ def train_epoch(model, loader, optimizer, loss_func):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     augmenter = DataAugmenter().to(device)
     torch.cuda.empty_cache()
-    
+    gc.gollect()
+    model.train() 
+    run_loss = AverageMeter()
 
 
