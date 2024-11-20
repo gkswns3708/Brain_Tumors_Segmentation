@@ -11,6 +11,9 @@ import tqdm as tqdm
 
 
 from utils.augment import DataAugmenter
+from metrics.metrics import AverageMeter
+
+from monai.data import decollate_batch
 
 import torch
 import torch.nn as nn
@@ -59,6 +62,43 @@ def train_epoch(model, loader, optimizer, loss_func):
     torch.cuda.empty_cache()
     gc.gollect()
     model.train() 
-    run_loss = AverageMeter()
+    run_loss = AverageMeter() # TODO: 왜 AverageMeter를 사용하는가?
+    # TODO: 혹은 tqdm을 사용해야 할 수 도 있음
+    for idx, batch_data in enumerate(loader):
+        image, label = batch_data["image"].to(device), batch_data["label"].to(device)
+        image, label = augmenter(image, label)
+        logits = model(image)
+        loss = loss_func(logits, label)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        run_loss.update(loss.item(), n = batch_data["image"].shape[0])
+    torch.cuda.empty_cache()
+    return run_loss.avg
+
+def val(model, loader, acc_func, model_inferer = None,
+        post_sigmoid = None, post_pred = None, post_label = None):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.eval()
+    run_acc = AverageMeter()
+    with torch.no_grad():
+        # TODO: 혹은 tqdm을 사용해야 할 수 도 있음
+        for idx, batch_data in enumerate(loader):
+            logits = model_inferer(batch_data["image"].to(device))
+            masks = decollate_batch(batch_data["label"].to(device))
+            prediction_lists = decollate_batch(logits)
+            predictions = [post_pred(post_sigmoid(prediction)) for prediction in prediction_lists]
+            # masks = [post_label(mask) for mask in masks]
+            # TODO: What is acc_func's parent class?
+            acc_func.reset()
+            acc_func(y_pred=predictions, y=masks)
+            acc, not_nans = acc_func.aggregate()
+            run_acc.update(acc.cpu().numpy(), n=not_nans.cpu().numpy())
+    return run_acc.avg
+            
+            
+            
+    
+        
 
 

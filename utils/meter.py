@@ -13,4 +13,41 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # 현재 작업 디렉토리 기
 
 from metrics.metrics import dice_metric, jaccard_metric
 
-class Meter
+class Meter:
+    "Accumulate iou and dice scores"
+    def __init__(self, threshold: float = 0.5):
+        self.threshold: float = threshold
+        self.dice_scores: list = [] # dice_scores
+        self.iou_scores: list = [] # jaccard_scores
+        
+    def update(self, logits: torch.Tensor, targets: torch.Tensor):
+        # TODO: logits, targets의 shape 확인
+        probs = torch.sigmoid(logits)
+        dice = dice_metric(probs, targets, self.threshold)
+        iou = jaccard_metric(probs, targets, self. threshold)
+        
+        self.dice_scores.append(dice)
+        self.iou_scores.append(iou)
+    
+    def get_metrics(self) -> np.ndarray:
+        dice = np.mean(self.dice_scores)
+        iou = np.mean(self.iou_scores)
+        return dice, iou
+
+class AverageMeter(object):
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        # TODO: what is val? 
+        # [expected answer] value?
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = np.where(self.count > 0, self.sum / self.count, self.sum)
