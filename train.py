@@ -53,6 +53,8 @@ class Solver:
         }
         return optimizers[name]
 
+# TODO: nnFormer는 do_ds option에 대한 부분이 필요함.
+
 def train_epoch(model, loader, optimizer, loss_func):
     """
     Training NN for Brain Tumor Segmentation Task with 3D MRI Voxel Images.

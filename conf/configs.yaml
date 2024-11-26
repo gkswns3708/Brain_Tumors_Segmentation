@@ -1,0 +1,6 @@
+defaults:
+  - model: default
+  - dataset: default
+  - training: default
+  - test: default
+type: "get-gif" 

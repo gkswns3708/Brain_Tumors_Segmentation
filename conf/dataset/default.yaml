@@ -1,0 +1,3 @@
+train_val_folder: /workspace/
+test_folder: /workspace
+dataset_folder: /workspace/

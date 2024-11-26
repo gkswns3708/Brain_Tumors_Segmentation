@@ -6,6 +6,7 @@ from monai.transforms.intensity.array import RandGaussianNoise, GaussianSharpen,
 
 
 
+# TODO: 사용처 정리하기.
 class DataAugmenter(nn.Module):
     def __init__(self):
         super(DataAugmenter, self).__init__()
