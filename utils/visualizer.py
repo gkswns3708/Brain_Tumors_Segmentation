@@ -160,7 +160,7 @@ def get_show_image(image, labels, predictions, cfg, is_categorical = False):
                 + alpha * mask * class_colors[idx][channel]
             # non-overlay
             predicted_image[..., channel] = predicted_image[..., channel] * (1 - alpha * prediction) \
-                + alpha * prediction * class_colors[idx][channel]     
+                + alpha * prediction * class_colors[(idx + 1) % 3][channel]     
             # overlay
             overlay_predicted_image[..., channel] = overlay_predicted_image[..., channel] * (1 - alpha * prediction) \
                 + (alpha / 2) * prediction * class_colors[(idx + 1) % 3][channel] + (alpha / 2) * mask * class_colors[idx][channel]
