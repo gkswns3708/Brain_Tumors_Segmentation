@@ -3,3 +3,4 @@ stored_prediction/
 logger/
 __pycache__/
 outputs/
+!/runs/sample_*
