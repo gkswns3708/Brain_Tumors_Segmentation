@@ -16,12 +16,14 @@ import sys
 
 
 def get_brats_folder(dataset_folder, mode):
-    assert mode in ["train","train_val", "test"]
+    assert mode in ["train","train_val", "test", "inference"]
     if mode == "train":
         return os.path.join(dataset_folder, "brats2023", "train")
     elif mode == "train_val":
         return os.path.join(dataset_folder, "brats2023", "val")
     elif mode == "test" :
+        return os.path.join(dataset_folder, "brats2023", "test")
+    elif mode == "inference":
         return os.path.join(dataset_folder, "brats2023", "test")
 
 def mkdir(folder):
@@ -83,11 +85,14 @@ class AverageMeter(object):
 
 
 def get_crop_slice(target_size,dim):
+    # dim = (z or y or x) size
     if dim > target_size:
         crop_extent = dim - target_size
         left = random.randint(0, crop_extent)
-        right = crop_extent - left
-        return (left, dim - right)
+        # TODO: 위가 맞는지 아래가 맞는지 생각.
+        return (left, left + target_size)
+        # right = crop_extent - left
+        # return (left, dim - right)
     else:
         return (0, dim)
 
@@ -206,3 +211,32 @@ def cal_dice(predict, target, haussdor, dice):
         wt_hd = 347
     
     return [et_dice, tc_dice, wt_dice, et_hd, tc_hd, wt_hd]
+
+
+def pad_to_original_shape(cropped_tensor, nonzero_indexes, original_shape):
+    """
+    cropped_tensor: (C, D, H, W) 형태의 잘라낸 텐서 == prediction
+    nonzero_indexes: 잘라낸 부분의 시작과 끝 인덱스 ((zmin, zmax), (ymin, ymax), (xmin, xmax))
+    original_shape: 원래 텐서의 (D, H, W) 크기
+    """
+    (zmin, zmax), (ymin, ymax), (xmin, xmax) = nonzero_indexes
+
+    # PyTorch 텐서를 NumPy로 변환 (필요한 경우)
+    if isinstance(cropped_tensor, torch.Tensor):
+        cropped_tensor = cropped_tensor.cpu().numpy()
+    
+    # 채널 수 가져오기
+    num_classes = cropped_tensor.shape[1]  
+    
+    # 원래 크기의 빈 텐서를 생성 (C, D, H, W)
+    padded_tensor = np.zeros((1, num_classes, *original_shape), dtype=cropped_tensor.dtype)
+
+    # 해당 영역에 잘라낸 텐서를 삽입
+    padded_tensor[:, :, zmin:zmax, ymin:ymax, xmin:xmax] = cropped_tensor
+
+    # 다시 PyTorch 텐서로 변환
+    padded_tensor = torch.from_numpy(padded_tensor)
+    return padded_tensor
+
+
+

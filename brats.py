@@ -19,17 +19,18 @@ class BraTS(Dataset):
         self.mode = mode
         self.target_size = target_size
         self.datas = []
-        self.pattens =["-t1n","-t1c","-t2w","-t2f"]
-        if mode == "train" or mode == "train_val" or mode == "test" :
-            self.pattens += ["-seg"]
+        self.patterns =["-t1n","-t1c","-t2w","-t2f"]
+        if mode == "train" or mode == "train_val" or mode == "test" or mode == "inference":
+            self.patterns += ["-seg"]
         for patient_id in patient_ids:
-            paths = [f"{patient_id}{patten}.nii.gz" for patten in self.pattens]
+            paths = [f"{patient_id}{pattern}.nii.gz" for pattern in self.patterns]
             patient = dict(
                 id=patient_id, t1=paths[0], t1ce=paths[1],
-                t2=paths[2], flair=paths[3], seg=paths[4] if mode == "train" or mode == "train_val" or mode == "val" or mode == "test" or mode == "visualize" else None
+                t2=paths[2], flair=paths[3], seg=paths[4] if mode == "train" or mode == "train_val" or mode == "val" or mode == "test" or mode == "visualize" or "inference" else None
             )
             self.datas.append(patient)
         # print(self.datas)
+        print(len(self.datas), "- len(self.datas)")
 
     def __getitem__(self, idx):
         patient = self.datas[idx]
@@ -39,18 +40,20 @@ class BraTS(Dataset):
         patient_image = {key:torch.tensor(load_nii(f"{self.patients_dir}/{patient_id}/{patient[key]}")) for key in patient if key not in ["id", "seg"]}
         patient_label = torch.tensor(load_nii(f"{self.patients_dir}/{patient_id}/{patient['seg']}").astype("int8"))
         patient_image = torch.stack([patient_image[key] for key in patient_image])  
-        if self.mode == "train" or self.mode == "train_val" or self.mode == "test":
+        if self.mode == "train" or self.mode == "train_val" or self.mode == "test" or self.mode == "inference":
             # ET=3, ED=2, NCR=1, and background=0
             et = patient_label == 3
             tc = torch.logical_or(patient_label == 1, patient_label == 3)
             wt = torch.logical_or(tc, patient_label == 2)
             patient_label = torch.stack([et, tc, wt])
 
+
         # Removing black area from the edge of the MRI
         nonzero_index = torch.nonzero(torch.sum(patient_image, axis=0)!=0)
         z_indexes, y_indexes, x_indexes = nonzero_index[:,0], nonzero_index[:,1], nonzero_index[:,2]
         zmin, ymin, xmin = [max(0, int(torch.min(arr) - 1)) for arr in (z_indexes, y_indexes, x_indexes)]
         zmax, ymax, xmax = [int(torch.max(arr) + 1) for arr in (z_indexes, y_indexes, x_indexes)]
+        # print(zmin, zmax, ymin, ymax, xmin, xmax, "- zmin, zmax, ymin, ymax, xmin, xmax")
         patient_image = patient_image[:, zmin:zmax, ymin:ymax, xmin:xmax].float()
 
         for i in range(patient_image.shape[0]):
@@ -65,6 +68,8 @@ class BraTS(Dataset):
             pad_h = (128-h) if 128-h > 0 else 0
             pad_w = (128-w) if 128-w > 0 else 0
             patient_image, patient_label, pad_list = pad_image_and_label(patient_image, patient_label, target_size=(d+pad_d, h+pad_h, w+pad_w))
+        elif self.mode == "inference":
+            pass
 
         return dict(
             patient_id = patient["id"],
@@ -80,6 +85,7 @@ class BraTS(Dataset):
 
 def get_datasets(dataset_folder, mode, target_size = (128, 128, 128)):
     dataset_folder = get_brats_folder(dataset_folder, mode)
+    print(dataset_folder, "- dataset_folder")
     assert os.path.exists(dataset_folder), "Dataset Folder Does Not Exist1"
     patients_ids = [x for x in listdir(dataset_folder)]
     return BraTS(dataset_folder, patients_ids, mode, target_size=target_size)

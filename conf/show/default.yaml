@@ -1,5 +1,5 @@
 dataset_folder: /workspace/
 model_path: /mnt/06.Brats/Brain-Tumors-Segmentation/nn-Former_CHJ/checkpoint/checkpoint.pth.tar
 type: prediction_label-get-gif
-patient_id: 0
+patient_id: 10
 modality: T1n

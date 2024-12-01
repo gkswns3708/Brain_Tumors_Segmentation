@@ -1,0 +1,8 @@
+weights: /mnt/06.Brats/Brain-Tumors-Segmentation/nn-Former_CHJ/checkpoint/checkpoint.pth.tar
+tta: False
+sw_batch: 2
+batch: 1
+infer_overlap: 0.6
+workers: 12
+csv_folder: "csv"
+dataset: /workspace

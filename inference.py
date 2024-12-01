@@ -20,6 +20,7 @@ from monai.metrics import DiceMetric
 from utils.general import load_pretrained_model
 from utils.all_utils import save_seg_csv
 from utils.all_utils import cal_confuse, cal_dice
+from utils.all_utils import pad_to_original_shape
 from brats import get_datasets
 from utils.meter import AverageMeter
 
@@ -93,7 +94,7 @@ def inference(model, input, batch_size, overlap):
     return _compute(input)
 
 
-def test(args, data_loader, model):
+def test(args, data_loader, model, mode="test"):
     """test the model on the test dataset"""
     metrics_dict = []
     haussdor = HausdorffDistanceMetric(include_background=True, percentile=95)
@@ -113,6 +114,7 @@ def test(args, data_loader, model):
         pad_list = data["pad_list"]
         inputs = inputs.cuda()
         model.cuda()
+        # print(args.test.tta, "- args.test.tta")
         with torch.no_grad():  
             if args.test.tta:
                 predict = torch.sigmoid(inference(model, inputs, batch_size=sw_bs, overlap=infer_overlap))
@@ -128,7 +130,15 @@ def test(args, data_loader, model):
                 predict = torch.sigmoid(inference(model, inputs, batch_size=sw_bs, overlap=infer_overlap))
                 
         # targets = targets[:, :, pad_list[-4]:targets.shape[2]-pad_list[-3], pad_list[-6]:targets.shape[3]-pad_list[-5], pad_list[-8]:targets.shape[4]-pad_list[-7]]
-        predict = predict[:, :, pad_list[-4]:predict.shape[2]-pad_list[-3], pad_list[-6]:predict.shape[3]-pad_list[-5], pad_list[-8]:predict.shape[4]-pad_list[-7]]
+        if mode == "inference":
+            # TODO: 원래 (240, 240, 155)인지 (155, 240, 240인지 확인.)
+            # print(predict.shape, "- predict.shape")
+            # print(data['label'].shape, "- label.shape")
+            nonzero_indexes = data['nonzero_indexes']
+            # print(nonzero_indexes, "- nonzero_indexes")
+            predict = pad_to_original_shape(predict, nonzero_indexes, (155, 240, 240)) 
+        else:
+            predict = predict[:, :, pad_list[-4]:predict.shape[2]-pad_list[-3], pad_list[-6]:predict.shape[3]-pad_list[-5], pad_list[-8]:predict.shape[4]-pad_list[-7]]
         predict = (predict>0.5).squeeze()
         
         # print(targets.shape, "- targets.shape")
@@ -137,7 +147,11 @@ def test(args, data_loader, model):
         # Save the prediction to .nii.gz
         save_path = os.path.join(save_dir, f"{patient_id}.nii.gz")
         affine = np.eye(4)  # Identity matrix as the default affine
-        nifti_img = nib.Nifti1Image(predict.cpu().numpy().astype(np.int32), affine)
+        if predict.is_cuda:
+            predict = predict.cpu().numpy().astype(np.int32)
+        else:
+            predict = predict.numpy().astype(np.int32)
+        nifti_img = nib.Nifti1Image(predict, affine)
         nib.save(nifti_img, save_path)
         print(f"Saved prediction for {patient_id} at {save_path}")
         # for targs in targets:
@@ -206,16 +220,18 @@ def main(cfg: DictConfig):
 
     # Load dataset
     # TODO: 
-    test_loader = get_datasets(dataset_folder=dataset_folder, mode="test", target_size=(128, 128, 128))
+    test_loader = get_datasets(dataset_folder=dataset_folder, mode="inference", target_size=(128, 128, 128))
     test_loader = torch.utils.data.DataLoader(test_loader, 
                                             batch_size=batch_size, 
                                             shuffle=False, num_workers=workers, 
                                             pin_memory=True) 
     
-    
+    # mode=cfg.inference.mode
+    mode = "inference" # TODO: 여기 바꾸기, cfg로 조절할 수 있도록. args나
+
     # Evaluate
     print("start test")
-    test(cfg, test_loader, model)
+    test(cfg, test_loader, model, mode=mode)
 
     print('done!!')
 

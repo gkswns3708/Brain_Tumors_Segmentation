@@ -4,3 +4,4 @@ defaults:
   - training: default
   - test: default
   - show: default
+  - inference: default
