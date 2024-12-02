@@ -10,13 +10,13 @@ This project demonstrates brain tumor segmentation through visualizations.
   </tr>
   <tr>
     <td>
-      <img src="runs/label/gif_label_0_T1n_ET.gif" alt="Label Visualization" width="200">
+      <img src="/runs/example_label/gif_label_10_T1n_TC.gif" alt="Label Visualization" width="200">
     </td>
     <td>
-      <img src="runs/prediction/gif_prediction_0_T1n_ET.gif" alt="Prediction Visualization" width="200">
+      <img src="runs/example_prediction/gif_prediction_10_T1n_TC.gif" alt="Prediction Visualization" width="200">
     </td>
     <td>
-      <img src="runs/overlay/gif_overlay_0_T1n_ET.gif" alt="Overlay Visualization" width="200">
+      <img src="runs/example_overlay/gif_overlay_10_T1n_TC.gif" alt="Overlay Visualization" width="200">
     </td>
   </tr>
 </table>
