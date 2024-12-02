@@ -143,31 +143,40 @@ def get_show_image(image, labels, predictions, cfg, is_categorical = False):
     labeled_image_list = [image.copy()]
     predicted_images_list = [image.copy()]
     overlay_images_list = [image.copy()]
-    class_colors = {
-        0: [255, 0, 0],    # Class 1 (Red)
-        1: [0, 255, 0],    # Class 2 (Green)
-        2: [0, 0, 255]     # Class 3 (Blue)
-    }
+
+    # 색상 정의: label은 빨간색, prediction은 초록색
+    label_color = [255, 0, 0]    # 빨간색
+    prediction_color = [0, 255, 0]  # 초록색
     alpha = 0.5
+
     for idx in tqdm(range(labels.shape[-1]), desc="Processing images"):
-        mask = (labels[:, :, :, idx] == 1)  # 특정 클래스에 해당하는 마스크
-        prediction = (predictions[:, :, :, idx] == 1)  
-        labeled_image =  np.stack([image] * 3, axis=-1)  
-        predicted_image = np.stack([image] * 3, axis=-1) 
-        overlay_predicted_image = np.stack([image] * 3, axis=-1)  
+        mask = (labels[:, :, :, idx] == 1)  # Label 마스크
+        prediction = (predictions[:, :, :, idx] == 1)  # Prediction 마스크
+
+        # 초기화된 이미지 생성
+        labeled_image = np.stack([image] * 3, axis=-1)
+        predicted_image = np.stack([image] * 3, axis=-1)
+        overlay_predicted_image = np.stack([image] * 3, axis=-1)
+
         for channel in range(3):
+            # Label만 적용 (빨간색)
             labeled_image[..., channel] = labeled_image[..., channel] * (1 - alpha * mask) \
-                + alpha * mask * class_colors[idx][channel]
-            # non-overlay
+                + alpha * mask * label_color[channel]
+
+            # Prediction만 적용 (초록색)
             predicted_image[..., channel] = predicted_image[..., channel] * (1 - alpha * prediction) \
-                + alpha * prediction * class_colors[(idx + 1) % 3][channel]     
-            # overlay
+                + alpha * prediction * prediction_color[channel]
+
+            # Overlay된 부분 적용 (빨간색과 초록색 혼합)
             overlay_predicted_image[..., channel] = overlay_predicted_image[..., channel] * (1 - alpha * prediction) \
-                + (alpha / 2) * prediction * class_colors[(idx + 1) % 3][channel] + (alpha / 2) * mask * class_colors[idx][channel]
-            
+                + (alpha / 2) * prediction * prediction_color[channel] \
+                + (alpha / 2) * mask * label_color[channel]
+
+        # 결과 저장
         labeled_image_list.append(labeled_image)
         predicted_images_list.append(predicted_image)
         overlay_images_list.append(overlay_predicted_image)
+
 
     return labeled_image_list, predicted_images_list, overlay_images_list
 
@@ -189,7 +198,7 @@ def process_images(image_list, processed_images):
 
 # 각 이미지 리스트에 대해 처리 함수 호출
 
-def save_gif(images, folder_path, name, cfg, mapping_table, label_type):
+def save_gif(images, folder_path, name, cfg, mapping_table, id, label_type):
     """
     GIF 파일을 저장하는 함수.
 
@@ -204,10 +213,10 @@ def save_gif(images, folder_path, name, cfg, mapping_table, label_type):
     patient_id = cfg.show.patient_id
     modality = cfg.show.modality
     for idx, img in enumerate(tqdm(images, desc="Saving GIFs")):
-        file_path = f"{folder_path}/{name}_{label_type}_{patient_id}_{modality}_{mapping_table[idx]}.gif"
+        file_path = f"{folder_path}/{name}_{label_type}_{id}_{modality}_{mapping_table[idx]}.gif"
         imageio.mimsave(file_path, img, duration=0.5, format='GIF', loop=0)
 
-def visualize_data_gif(labeld_img_list, predicted_img_list, overlay_predicted_img_list, cfg, name="gif"):
+def visualize_data_gif(labeld_img_list, predicted_img_list, overlay_predicted_img_list, cfg, id, name="gif"):
     mapping_table = {0: "BG", 1: "ET", 2: "TC", 3: "WT"}
     labeled_images = [[] for _ in range(len(labeld_img_list))]
     predicted_images = [[] for _ in range(len(predicted_img_list))]
@@ -220,9 +229,9 @@ def visualize_data_gif(labeld_img_list, predicted_img_list, overlay_predicted_im
     os.makedirs(f"./runs/overlay", exist_ok=True)
     os.makedirs(f"./runs/prediction", exist_ok=True)
 
-    save_gif(labeled_images, "./runs/label", name, cfg, mapping_table, "label")
-    save_gif(predicted_images, "./runs/prediction", name, cfg, mapping_table, "prediction")
-    save_gif(overlay_predicted_images, "./runs/overlay", name, cfg, mapping_table, "overlay")
+    save_gif(labeled_images, "./runs/label", name, cfg, mapping_table, id, "label")
+    save_gif(predicted_images, "./runs/prediction", name, cfg, mapping_table, id, "prediction")
+    save_gif(overlay_predicted_images, "./runs/overlay", name, cfg, mapping_table, id, "overlay")
 
         
     return 

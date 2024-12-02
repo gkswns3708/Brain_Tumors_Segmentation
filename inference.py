@@ -105,7 +105,7 @@ def test(args, data_loader, model, mode="test"):
 
     save_dir = "./stored_prediction/nn_former/"
     os.makedirs(save_dir, exist_ok=True)
-
+    result = []
     
     for data in tqdm(data_loader):
         patient_id = data["patient_id"][0]
@@ -137,39 +137,50 @@ def test(args, data_loader, model, mode="test"):
             nonzero_indexes = data['nonzero_indexes']
             # print(nonzero_indexes, "- nonzero_indexes")
             predict = pad_to_original_shape(predict, nonzero_indexes, (155, 240, 240)) 
+            label = pad_to_original_shape(data['label'], nonzero_indexes, (155, 240, 240))
         else:
             predict = predict[:, :, pad_list[-4]:predict.shape[2]-pad_list[-3], pad_list[-6]:predict.shape[3]-pad_list[-5], pad_list[-8]:predict.shape[4]-pad_list[-7]]
-        predict = (predict>0.5).squeeze()
+        predict = (predict>0.5).squeeze().to(torch.int8)
         
         # print(targets.shape, "- targets.shape")
         print(predict.shape, "- predict.shape")
 
         # Save the prediction to .nii.gz
-        save_path = os.path.join(save_dir, f"{patient_id}.nii.gz")
+        prediction_save_path = os.path.join(save_dir, f"prediction_{patient_id}.nii.gz")
+        label_save_path = os.path.join(save_dir, f"label_{patient_id}.nii.gz")
         affine = np.eye(4)  # Identity matrix as the default affine
         if predict.is_cuda:
-            predict = predict.cpu().numpy().astype(np.int32)
+            np_predict = predict.cpu().numpy().astype(np.int32)
+            np_label = label.cpu().numpy().astype(np.int32)
         else:
-            predict = predict.numpy().astype(np.int32)
-        nifti_img = nib.Nifti1Image(predict, affine)
-        nib.save(nifti_img, save_path)
-        print(f"Saved prediction for {patient_id} at {save_path}")
-        # for targs in targets:
+            np_predict = predict.numpy().astype(np.int32)
+            np_label = label.numpy().astype(np.int32)
 
-        # targets = targets.squeeze()
-        # dice_metrics = cal_dice(predict, targets, haussdor, meandice)
-        # confuse_metric = cal_confuse(predict, targets, patient_id)
-        # et_dice, tc_dice, wt_dice = dice_metrics[0], dice_metrics[1], dice_metrics[2]
-        # et_hd, tc_hd, wt_hd = dice_metrics[3], dice_metrics[4], dice_metrics[5]
-        # et_sens, tc_sens, wt_sens = get_value(confuse_metric[0][0]), get_value(confuse_metric[1][0]), get_value(confuse_metric[2][0])
-        # et_spec, tc_spec, wt_spec = get_value(confuse_metric[0][1]), get_value(confuse_metric[1][1]), get_value(confuse_metric[2][1])
-        # metrics_dict.append(dict(id=patient_id,
-        #     et_dice=et_dice, tc_dice=tc_dice, wt_dice=wt_dice, 
-        #     et_hd=et_hd, tc_hd=tc_hd, wt_hd=wt_hd,
-        #     et_sens=et_sens, tc_sens=tc_sens, wt_sens=wt_sens,
-        #     et_spec=et_spec, tc_spec=tc_spec, wt_spec=wt_spec))
+        prediction_nifti_img = nib.Nifti1Image(np_predict, affine)
+        label_nifiti_img = nib.Nifti1Image(np_label, affine)
 
-    # save_seg_csv(metrics_dict, args)
+        nib.save(prediction_nifti_img, prediction_save_path)
+        nib.save(label_nifiti_img, label_save_path)
+
+        # print(label.shape, predict.shape, type(label), type(predict), "- label, predict shape")
+
+        print(f"Saved prediction for {patient_id} at {prediction_save_path}")
+        label = label.squeeze()
+        dice_metrics = cal_dice(predict, label, haussdor, meandice)
+        confuse_metric = cal_confuse(predict, label, patient_id)
+        et_dice, tc_dice, wt_dice = dice_metrics[0], dice_metrics[1], dice_metrics[2]
+        et_hd, tc_hd, wt_hd = dice_metrics[3], dice_metrics[4], dice_metrics[5]
+        et_sens, tc_sens, wt_sens = get_value(confuse_metric[0][0]), get_value(confuse_metric[1][0]), get_value(confuse_metric[2][0])
+        et_spec, tc_spec, wt_spec = get_value(confuse_metric[0][1]), get_value(confuse_metric[1][1]), get_value(confuse_metric[2][1])
+        metrics_dict.append(dict(id=patient_id,
+            et_dice=et_dice, tc_dice=tc_dice, wt_dice=wt_dice, 
+            et_hd=et_hd, tc_hd=tc_hd, wt_hd=wt_hd,
+            et_sens=et_sens, tc_sens=tc_sens, wt_sens=wt_sens,
+            et_spec=et_spec, tc_spec=tc_spec, wt_spec=wt_spec))
+
+    result_df = pd.DataFrame(metrics_dict)
+    result_df.to_csv("result_custom.csv", index=False)
+    save_seg_csv(metrics_dict, args)
 
 
 @hydra.main(config_name='configs', config_path= 'conf', version_base=None)

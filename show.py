@@ -128,7 +128,7 @@ def show_result(cfg: DictConfig):
         prediction_image = pad_to_original_shape(prediction_image, nonzero_indexes, (155, 240, 240))
 
         labelled_imgs, predicted_imgs, overlay_predicted_imgs = get_show_image(image, label, prediction_image, cfg, is_categorical=True)
-        visualize_data_gif(labelled_imgs, predicted_imgs, overlay_predicted_imgs, cfg)
+        visualize_data_gif(labelled_imgs, predicted_imgs, overlay_predicted_imgs, cfg, id)
 
     else:
         logger.info('No option selected')

@@ -186,28 +186,28 @@ def cal_dice(predict, target, haussdor, dice):
         et_dice = float(dice(p_et, t_et).cpu().numpy())
         et_hd = float(haussdor(p_et, t_et).cpu().numpy())
     elif torch.sum(p_et) == 0 and torch.sum(t_et) == 0:
-        et_dice =1
+        et_dice = 1
         et_hd = 0
     elif (torch.sum(p_et) == 0 and torch.sum(t_et) != 0) or (torch.sum(p_et) != 0 and torch.sum(t_et) == 0):
-        et_dice =0
+        et_dice = 0
         et_hd = 347
     if torch.sum(p_tc) != 0 and torch.sum(t_tc) != 0:
         tc_dice = float(dice(p_tc, t_tc).cpu().numpy())
         tc_hd = float(haussdor(p_tc, t_tc).cpu().numpy())
     elif torch.sum(p_tc) == 0 and torch.sum(t_tc) == 0:
-        tc_dice =1
+        tc_dice = 1
         tc_hd = 0
     elif (torch.sum(p_tc) == 0 and torch.sum(t_tc) != 0) or (torch.sum(p_tc) != 0 and torch.sum(t_tc) == 0):
-        tc_dice =0
+        tc_dice = 0
         tc_hd = 347
     if torch.sum(p_wt) != 0 and torch.sum(t_wt) != 0:
         wt_dice = float(dice(p_wt, t_wt).cpu().numpy())
         wt_hd = float(haussdor(p_wt, t_wt).cpu().numpy())
     elif torch.sum(p_wt) == 0 and torch.sum(t_wt) == 0:
-        wt_dice =1
+        wt_dice = 1
         wt_hd = 0
     elif (torch.sum(p_wt) == 0 and torch.sum(t_wt) != 0) or (torch.sum(p_wt) != 0 and torch.sum(t_wt) == 0):
-        wt_dice =0
+        wt_dice = 0
         wt_hd = 347
     
     return [et_dice, tc_dice, wt_dice, et_hd, tc_hd, wt_hd]
