@@ -67,10 +67,10 @@ class BraTS(Dataset):
                 # 1: TC(Tumor Core) -> 1 + 3
                 # 2: WT(Whole Tumor) -> 1 + 2 + 3
                 # 3: ET(Enhancing Tumor) -> 3
-            et = patient_label == 3
-            tc = torch.logical_or(patient_label == 1, patient_label == 3)
-            wt = torch.logical_or(tc, patient_label == 2)
-            patient_label = torch.stack([et, tc, wt])
+        et = patient_label == 3
+        tc = torch.logical_or(patient_label == 1, patient_label == 3)
+        wt = torch.logical_or(tc, patient_label == 2)
+        patient_label = torch.stack([et, tc, wt])
         # Removing black area from the edge of the MRI
         # 모든 Modality에서 값이 없는(=0)인 부분을 얻음
         nonzero_index = torch.nonzero(torch.sum(patient_image, axis=0) != 0)
